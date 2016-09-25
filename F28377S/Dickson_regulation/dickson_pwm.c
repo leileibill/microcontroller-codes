@@ -2,6 +2,13 @@
 #include "dickson_regulation.h"
 
 
+float duty_main = 0.5;		// duty ratio, between 0 to 1
+int fsw = 200;		 	// switching frequency, in kHz
+
+int period =1000;		// period of the PWM counters
+
+float duty6,duty7,duty8,duty9,duty10,duty11;	// duty ratio of each pwm channel
+int phase6,phase7,phase8,phase9,phase10,phase11;	// phase shift of each pwm channel
 
 //
 // InitEPwm1Example - Initialize EPWM1 configuration
@@ -157,10 +164,20 @@ void InitEPwm3Example()
     EPwm3Regs.ETPS.bit.INTPRD = ET_3RD;            // Generate INT on 3rd event
 }
 
+void InitPWMs_dickson()
+{
 
+	period = sys_clock/fsw;
+	InitEPwm6();
+	InitEPwm7();
+	InitEPwm8();
+	InitEPwm9();
+	InitEPwm10();
+	InitEPwm11();
+}
 void InitEPwm6()
 {
-    EPwm6Regs.TBPRD = 6000;                       // Set timer period
+    EPwm6Regs.TBPRD = period;                       // Set timer period
     EPwm6Regs.TBPHS.bit.TBPHS = 0x0000;           // Phase is 0
     EPwm6Regs.TBCTR = 0x0000;                     // Clear counter
 
@@ -180,7 +197,7 @@ void InitEPwm6()
     //
     // Setup compare
     //
-    EPwm6Regs.CMPA.bit.CMPA = 3000;
+    EPwm6Regs.CMPA.bit.CMPA = duty6*period;
 
     //
     // Set actions
@@ -211,7 +228,7 @@ void InitEPwm6()
 
 void InitEPwm7()
 {
-    EPwm7Regs.TBPRD = 6000;                       // Set timer period
+    EPwm7Regs.TBPRD = period;                       // Set timer period
     EPwm7Regs.TBPHS.bit.TBPHS = 0x0000;           // Phase is 0
     EPwm7Regs.TBCTR = 0x0000;                     // Clear counter
 
@@ -231,7 +248,7 @@ void InitEPwm7()
     //
     // Setup compare
     //
-    EPwm7Regs.CMPA.bit.CMPA = 3000;
+    EPwm7Regs.CMPA.bit.CMPA = duty7*period;
 
     //
     // Set actions
@@ -261,7 +278,7 @@ void InitEPwm7()
 }
 void InitEPwm8()
 {
-    EPwm8Regs.TBPRD = 6000;                       // Set timer period
+    EPwm8Regs.TBPRD = period;                       // Set timer period
     EPwm8Regs.TBPHS.bit.TBPHS = 0x0000;           // Phase is 0
     EPwm8Regs.TBCTR = 0x0000;                     // Clear counter
 
@@ -281,7 +298,7 @@ void InitEPwm8()
     //
     // Setup compare
     //
-    EPwm8Regs.CMPA.bit.CMPA = 3000;
+    EPwm8Regs.CMPA.bit.CMPA = duty8*period;
 
     //
     // Set actions
@@ -311,7 +328,7 @@ void InitEPwm8()
 }
 void InitEPwm9()
 {
-    EPwm9Regs.TBPRD = 6000;                       // Set timer period
+    EPwm9Regs.TBPRD = period;                       // Set timer period
     EPwm9Regs.TBPHS.bit.TBPHS = 0x0000;           // Phase is 0
     EPwm9Regs.TBCTR = 0x0000;                     // Clear counter
 
@@ -331,7 +348,7 @@ void InitEPwm9()
     //
     // Setup compare
     //
-    EPwm9Regs.CMPA.bit.CMPA = 3000;
+    EPwm9Regs.CMPA.bit.CMPA = duty9*period;
 
     //
     // Set actions
@@ -361,7 +378,7 @@ void InitEPwm9()
 }
 void InitEPwm10()
 {
-    EPwm10Regs.TBPRD = 6000;                       // Set timer period
+    EPwm10Regs.TBPRD = period;                       // Set timer period
     EPwm10Regs.TBPHS.bit.TBPHS = 0x0000;           // Phase is 0
     EPwm10Regs.TBCTR = 0x0000;                     // Clear counter
 
@@ -381,7 +398,7 @@ void InitEPwm10()
     //
     // Setup compare
     //
-    EPwm10Regs.CMPA.bit.CMPA = 3000;
+    EPwm10Regs.CMPA.bit.CMPA = duty10*period;
 
     //
     // Set actions
@@ -411,7 +428,7 @@ void InitEPwm10()
 }
 void InitEPwm11()
 {
-    EPwm11Regs.TBPRD = 6000;                       // Set timer period
+    EPwm11Regs.TBPRD = period;                       // Set timer period
     EPwm11Regs.TBPHS.bit.TBPHS = 0x0000;           // Phase is 0
     EPwm11Regs.TBCTR = 0x0000;                     // Clear counter
 
@@ -431,7 +448,7 @@ void InitEPwm11()
     //
     // Setup compare
     //
-    EPwm11Regs.CMPA.bit.CMPA = 3000;
+    EPwm11Regs.CMPA.bit.CMPA = duty11*period;
 
     //
     // Set actions
