@@ -10,6 +10,10 @@
 //
 // Defines
 //
+
+//#define _LAUNCHXL_F28377S
+
+
 #define sys_clock 200000		// system clock frequency, in kHz
 #define EPWM1_MAX_DB   0x03FF
 #define EPWM2_MAX_DB   0x03FF
