@@ -30,21 +30,22 @@ extern Uint16 EPwm1_DB_Direction;
 extern Uint16 EPwm2_DB_Direction;
 extern Uint16 EPwm3_DB_Direction;
 
-extern float duty_main = 0.5;		// duty ratio, between 0 to 1
-extern int fsw = 200;		 	// switching frequency, in kHz
+extern float duty_main;		// duty ratio, between 0 to 1
+extern int fsw;		 	// switching frequency, in kHz
+extern float split;		// split phase duty ratio
+extern int deadtime_R;		// rising edge deadtime in number of clock cycles
+extern int deadtime_F;		// falling edge deadtime
 
-extern int period =1000;		// period of the PWM counters
-
-
+extern int period;		// period of the PWM counters
 extern float duty6,duty7,duty8,duty9,duty10,duty11;	// duty ratio of each pwm channel, between 0 and 
 extern int phase6,phase7,phase8,phase9,phase10,phase11;	// phase shift of each pwm channel
+extern int offset;			// offset of phase shift to compensate for propagation delay
+
 //
 // Functions
 //
 
-void InitEPwm1Example(void);
-void InitEPwm2Example(void);
-void InitEPwm3Example(void);
+void InitEPwm1(void);
 void InitEPwm6(void);
 void InitEPwm7(void);
 void InitEPwm8(void);

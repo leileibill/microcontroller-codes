@@ -4,16 +4,19 @@
 
 float duty_main = 0.5;		// duty ratio, between 0 to 1
 int fsw = 200;		 	// switching frequency, in kHz
+float split = 0.75;		// split phase duty ratio
+// deadtime is realized through phase shift, since we are not using the B channels
+int deadtime_R = 0;		// rising edge deadtime in number of clock cycles
+int deadtime_F = 0;		// falling edge deadtime, currently not used
 
 int period =1000;		// period of the PWM counters
-
 float duty6,duty7,duty8,duty9,duty10,duty11;	// duty ratio of each pwm channel
 int phase6,phase7,phase8,phase9,phase10,phase11;	// phase shift of each pwm channel
-
+int offset;			// offset of phase shift to compensate for propagation delay
 //
 // InitEPwm1Example - Initialize EPWM1 configuration
 //
-void InitEPwm1Example()
+void InitEPwm1()
 {
     EPwm1Regs.TBPRD = 6000;                       // Set timer period
     EPwm1Regs.TBPHS.bit.TBPHS = 0x0000;           // Phase is 0
@@ -22,10 +25,10 @@ void InitEPwm1Example()
     //
     // Setup TBCLK
     //
-    EPwm1Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Count up
+    EPwm1Regs.TBCTL.bit.CTRMODE = TB_COUNT_UP; // Count up
     EPwm1Regs.TBCTL.bit.PHSEN = TB_DISABLE;        // Disable phase loading
-    EPwm1Regs.TBCTL.bit.HSPCLKDIV = TB_DIV4;       // Clock ratio to SYSCLKOUT
-    EPwm1Regs.TBCTL.bit.CLKDIV = TB_DIV4;
+    EPwm1Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1;       // Clock ratio to SYSCLKOUT
+    EPwm1Regs.TBCTL.bit.CLKDIV = TB_DIV1;
 
     EPwm1Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;    // Load registers every ZERO
     EPwm1Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
@@ -35,7 +38,7 @@ void InitEPwm1Example()
     //
     // Setup compare
     //
-    EPwm1Regs.CMPA.bit.CMPA = 3000;
+    EPwm1Regs.CMPA.bit.CMPA = duty6;
 
     //
     // Set actions
@@ -52,8 +55,8 @@ void InitEPwm1Example()
     EPwm1Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE;
     EPwm1Regs.DBCTL.bit.POLSEL = DB_ACTV_LO;
     EPwm1Regs.DBCTL.bit.IN_MODE = DBA_ALL;
-    EPwm1Regs.DBRED.bit.DBRED = EPWM1_MIN_DB;
-    EPwm1Regs.DBFED.bit.DBFED = EPWM1_MIN_DB;
+    EPwm1Regs.DBRED.bit.DBRED = deadtime_R;
+    EPwm1Regs.DBFED.bit.DBFED = deadtime_R;
     EPwm1_DB_Direction = DB_UP;
 
     //
@@ -64,110 +67,28 @@ void InitEPwm1Example()
     EPwm1Regs.ETPS.bit.INTPRD = ET_3RD;          // Generate INT on 3rd event
 }
 
-//
-// InitEPwm2Example - Initialize EPWM2 configuration
-//
-void InitEPwm2Example()
-{
-    EPwm2Regs.TBPRD = 6000;                       // Set timer period
-    EPwm2Regs.TBPHS.bit.TBPHS = 0x0000;           // Phase is 0
-    EPwm2Regs.TBCTR = 0x0000;                     // Clear counter
 
-    //
-    // Setup TBCLK
-    //
-    EPwm2Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Count up
-    EPwm2Regs.TBCTL.bit.PHSEN = TB_DISABLE;        // Disable phase loading
-    EPwm2Regs.TBCTL.bit.HSPCLKDIV = TB_DIV4;       // Clock ratio to SYSCLKOUT
-    EPwm2Regs.TBCTL.bit.CLKDIV = TB_DIV4;          // Slow just to observe on
-                                                   // the scope
-
-    //
-    // Setup compare
-    //
-    EPwm2Regs.CMPA.bit.CMPA = 3000;
-
-    //
-    // Set actions
-    //
-    EPwm2Regs.AQCTLA.bit.CAU = AQ_SET;            // Set PWM2A on Zero
-    EPwm2Regs.AQCTLA.bit.CAD = AQ_CLEAR;
-
-    EPwm2Regs.AQCTLB.bit.CAU = AQ_CLEAR;          // Set PWM2A on Zero
-    EPwm2Regs.AQCTLB.bit.CAD = AQ_SET;
-
-    //
-    // Active Low complementary PWMs - setup the deadband
-    //
-    EPwm2Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE;
-    EPwm2Regs.DBCTL.bit.POLSEL = DB_ACTV_LOC;
-    EPwm2Regs.DBCTL.bit.IN_MODE = DBA_ALL;
-    EPwm2Regs.DBRED.bit.DBRED = EPWM2_MIN_DB;
-    EPwm2Regs.DBFED.bit.DBFED = EPWM2_MIN_DB;
-    EPwm2_DB_Direction = DB_UP;
-
-    //
-    // Interrupt where we will modify the deadband
-    //
-    EPwm2Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;     // Select INT on Zero event
-    EPwm2Regs.ETSEL.bit.INTEN = 1;                // Enable INT
-    EPwm2Regs.ETPS.bit.INTPRD = ET_3RD;           // Generate INT on 3rd event
-}
-
-//
-// InitEPwm3Example - Initialize EPWM3 configuration
-//
-void InitEPwm3Example()
-{
-    EPwm3Regs.TBPRD = 6000;                        // Set timer period
-    EPwm3Regs.TBPHS.bit.TBPHS = 0x0000;            // Phase is 0
-    EPwm3Regs.TBCTR = 0x0000;                      // Clear counter
-
-    //
-    // Setup TBCLK
-    //
-    EPwm3Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Count up
-    EPwm3Regs.TBCTL.bit.PHSEN = TB_DISABLE;        // Disable phase loading
-    EPwm3Regs.TBCTL.bit.HSPCLKDIV = TB_DIV4;       // Clock ratio to SYSCLKOUT
-    EPwm3Regs.TBCTL.bit.CLKDIV = TB_DIV4;          // Slow so we can observe on
-                                                   // the scope
-
-    //
-    // Setup compare
-    //
-    EPwm3Regs.CMPA.bit.CMPA = 3000;
-
-    //
-    // Set actions
-    //
-    EPwm3Regs.AQCTLA.bit.CAU = AQ_SET;             // Set PWM3A on Zero
-    EPwm3Regs.AQCTLA.bit.CAD = AQ_CLEAR;
-
-    EPwm3Regs.AQCTLB.bit.CAU = AQ_CLEAR;           // Set PWM3A on Zero
-    EPwm3Regs.AQCTLB.bit.CAD = AQ_SET;
-
-    //
-    // Active high complementary PWMs - Setup the deadband
-    //
-    EPwm3Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE;
-    EPwm3Regs.DBCTL.bit.POLSEL = DB_ACTV_HIC;
-    EPwm3Regs.DBCTL.bit.IN_MODE = DBA_ALL;
-    EPwm3Regs.DBRED.bit.DBRED = EPWM3_MIN_DB;
-    EPwm3Regs.DBFED.bit.DBFED = EPWM3_MIN_DB;
-    EPwm3_DB_Direction = DB_UP;
-
-    //
-    // Interrupt where we will change the deadband
-    //
-    EPwm3Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;      // Select INT on Zero event
-    EPwm3Regs.ETSEL.bit.INTEN = 1;                 // Enable INT
-    EPwm3Regs.ETPS.bit.INTPRD = ET_3RD;            // Generate INT on 3rd event
-}
 
 void InitPWMs_dickson()
 {
 
 	period = sys_clock/fsw;
+	
+	duty6 = 0.5*duty_main*period;		// Ph1
+	duty7 = duty6;		// Ph2
+	duty8 = 0.5*duty_main*split*period;			// Ph5
+	duty9 = duty8;				// Ph6
+	duty10 = 1 - duty6;				// Ph3
+	duty11 = 1 - duty6;				// Ph4
+
+	phase6 = 0;			// Ph1
+	phase7 = 0.5*period;		// Ph2
+	phase8 = phase6;	// Ph5
+	phase9 = phase7;	// Ph6
+	duty10 = phase& + offset;		// Ph3
+	duty11 = phase6 + offset;		// Ph4
+	
+			
 	InitEPwm6();
 	InitEPwm7();
 	InitEPwm8();
@@ -184,10 +105,10 @@ void InitEPwm6()
     //
     // Setup TBCLK
     //
-    EPwm6Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Count up
+    EPwm6Regs.TBCTL.bit.CTRMODE = TB_COUNT_UP; // Count up
     EPwm6Regs.TBCTL.bit.PHSEN = TB_DISABLE;        // Disable phase loading
-    EPwm6Regs.TBCTL.bit.HSPCLKDIV = TB_DIV4;       // Clock ratio to SYSCLKOUT
-    EPwm6Regs.TBCTL.bit.CLKDIV = TB_DIV4;
+    EPwm6Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1;       // Clock ratio to SYSCLKOUT
+    EPwm6Regs.TBCTL.bit.CLKDIV = TB_DIV1;
 
     EPwm6Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;    // Load registers every ZERO
     EPwm6Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
@@ -214,16 +135,10 @@ void InitEPwm6()
     EPwm6Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE;
     EPwm6Regs.DBCTL.bit.POLSEL = DB_ACTV_LO;
     EPwm6Regs.DBCTL.bit.IN_MODE = DBA_ALL;
-    EPwm6Regs.DBRED.bit.DBRED = EPWM1_MIN_DB;
-    EPwm6Regs.DBFED.bit.DBFED = EPWM1_MIN_DB;
+    EPwm6Regs.DBRED.bit.DBRED = deadtime_R;
+    EPwm6Regs.DBFED.bit.DBFED = deadtime_R;
     EPwm1_DB_Direction = DB_UP;
 
-    //
-    // Interrupt where we will change the Deadband
-    //
-    EPwm6Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;    // Select INT on Zero event
-    EPwm6Regs.ETSEL.bit.INTEN = 1;               // Enable INT
-    EPwm6Regs.ETPS.bit.INTPRD = ET_3RD;          // Generate INT on 3rd event
 }
 
 void InitEPwm7()
@@ -235,10 +150,10 @@ void InitEPwm7()
     //
     // Setup TBCLK
     //
-    EPwm7Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Count up
+    EPwm7Regs.TBCTL.bit.CTRMODE = TB_COUNT_UP; // Count up
     EPwm7Regs.TBCTL.bit.PHSEN = TB_DISABLE;        // Disable phase loading
-    EPwm7Regs.TBCTL.bit.HSPCLKDIV = TB_DIV4;       // Clock ratio to SYSCLKOUT
-    EPwm7Regs.TBCTL.bit.CLKDIV = TB_DIV4;
+    EPwm7Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1;       // Clock ratio to SYSCLKOUT
+    EPwm7Regs.TBCTL.bit.CLKDIV = TB_DIV1;
 
     EPwm7Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;    // Load registers every ZERO
     EPwm7Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
@@ -265,16 +180,11 @@ void InitEPwm7()
     EPwm7Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE;
     EPwm7Regs.DBCTL.bit.POLSEL = DB_ACTV_LO;
     EPwm7Regs.DBCTL.bit.IN_MODE = DBA_ALL;
-    EPwm7Regs.DBRED.bit.DBRED = EPWM1_MIN_DB;
-    EPwm7Regs.DBFED.bit.DBFED = EPWM1_MIN_DB;
+    EPwm7Regs.DBRED.bit.DBRED = deadtime_R;
+    EPwm7Regs.DBFED.bit.DBFED = deadtime_R;
     EPwm1_DB_Direction = DB_UP;
 
-    //
-    // Interrupt where we will change the Deadband
-    //
-    EPwm7Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;    // Select INT on Zero event
-    EPwm7Regs.ETSEL.bit.INTEN = 1;               // Enable INT
-    EPwm7Regs.ETPS.bit.INTPRD = ET_3RD;          // Generate INT on 3rd event
+
 }
 void InitEPwm8()
 {
@@ -285,10 +195,10 @@ void InitEPwm8()
     //
     // Setup TBCLK
     //
-    EPwm8Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Count up
+    EPwm8Regs.TBCTL.bit.CTRMODE = TB_COUNT_UP; // Count up
     EPwm8Regs.TBCTL.bit.PHSEN = TB_DISABLE;        // Disable phase loading
-    EPwm8Regs.TBCTL.bit.HSPCLKDIV = TB_DIV4;       // Clock ratio to SYSCLKOUT
-    EPwm8Regs.TBCTL.bit.CLKDIV = TB_DIV4;
+    EPwm8Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1;       // Clock ratio to SYSCLKOUT
+    EPwm8Regs.TBCTL.bit.CLKDIV = TB_DIV1;
 
     EPwm8Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;    // Load registers every ZERO
     EPwm8Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
@@ -315,16 +225,11 @@ void InitEPwm8()
     EPwm8Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE;
     EPwm8Regs.DBCTL.bit.POLSEL = DB_ACTV_LO;
     EPwm8Regs.DBCTL.bit.IN_MODE = DBA_ALL;
-    EPwm8Regs.DBRED.bit.DBRED = EPWM1_MIN_DB;
-    EPwm8Regs.DBFED.bit.DBFED = EPWM1_MIN_DB;
+    EPwm8Regs.DBRED.bit.DBRED = deadtime_R;
+    EPwm8Regs.DBFED.bit.DBFED = deadtime_R;
     EPwm1_DB_Direction = DB_UP;
 
-    //
-    // Interrupt where we will change the Deadband
-    //
-    EPwm8Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;    // Select INT on Zero event
-    EPwm8Regs.ETSEL.bit.INTEN = 1;               // Enable INT
-    EPwm8Regs.ETPS.bit.INTPRD = ET_3RD;          // Generate INT on 3rd event
+
 }
 void InitEPwm9()
 {
@@ -335,10 +240,10 @@ void InitEPwm9()
     //
     // Setup TBCLK
     //
-    EPwm9Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Count up
+    EPwm9Regs.TBCTL.bit.CTRMODE = TB_COUNT_UP; // Count up
     EPwm9Regs.TBCTL.bit.PHSEN = TB_DISABLE;        // Disable phase loading
-    EPwm9Regs.TBCTL.bit.HSPCLKDIV = TB_DIV4;       // Clock ratio to SYSCLKOUT
-    EPwm9Regs.TBCTL.bit.CLKDIV = TB_DIV4;
+    EPwm9Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1;       // Clock ratio to SYSCLKOUT
+    EPwm9Regs.TBCTL.bit.CLKDIV = TB_DIV1;
 
     EPwm9Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;    // Load registers every ZERO
     EPwm9Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
@@ -365,16 +270,11 @@ void InitEPwm9()
     EPwm9Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE;
     EPwm9Regs.DBCTL.bit.POLSEL = DB_ACTV_LO;
     EPwm9Regs.DBCTL.bit.IN_MODE = DBA_ALL;
-    EPwm9Regs.DBRED.bit.DBRED = EPWM1_MIN_DB;
-    EPwm9Regs.DBFED.bit.DBFED = EPWM1_MIN_DB;
+    EPwm9Regs.DBRED.bit.DBRED = deadtime_R;
+    EPwm9Regs.DBFED.bit.DBFED = deadtime_R;
     EPwm1_DB_Direction = DB_UP;
 
-    //
-    // Interrupt where we will change the Deadband
-    //
-    EPwm9Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;    // Select INT on Zero event
-    EPwm9Regs.ETSEL.bit.INTEN = 1;               // Enable INT
-    EPwm9Regs.ETPS.bit.INTPRD = ET_3RD;          // Generate INT on 3rd event
+
 }
 void InitEPwm10()
 {
@@ -385,10 +285,10 @@ void InitEPwm10()
     //
     // Setup TBCLK
     //
-    EPwm10Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Count up
+    EPwm10Regs.TBCTL.bit.CTRMODE = TB_COUNT_UP; // Count up
     EPwm10Regs.TBCTL.bit.PHSEN = TB_DISABLE;        // Disable phase loading
-    EPwm10Regs.TBCTL.bit.HSPCLKDIV = TB_DIV4;       // Clock ratio to SYSCLKOUT
-    EPwm10Regs.TBCTL.bit.CLKDIV = TB_DIV4;
+    EPwm10Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1;       // Clock ratio to SYSCLKOUT
+    EPwm10Regs.TBCTL.bit.CLKDIV = TB_DIV1;
 
     EPwm10Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;    // Load registers every ZERO
     EPwm10Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
@@ -415,16 +315,10 @@ void InitEPwm10()
     EPwm10Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE;
     EPwm10Regs.DBCTL.bit.POLSEL = DB_ACTV_LO;
     EPwm10Regs.DBCTL.bit.IN_MODE = DBA_ALL;
-    EPwm10Regs.DBRED.bit.DBRED = EPWM1_MIN_DB;
-    EPwm10Regs.DBFED.bit.DBFED = EPWM1_MIN_DB;
+    EPwm10Regs.DBRED.bit.DBRED = deadtime_R;
+    EPwm10Regs.DBFED.bit.DBFED = deadtime_R;
     EPwm1_DB_Direction = DB_UP;
 
-    //
-    // Interrupt where we will change the Deadband
-    //
-    EPwm10Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;    // Select INT on Zero event
-    EPwm10Regs.ETSEL.bit.INTEN = 1;               // Enable INT
-    EPwm10Regs.ETPS.bit.INTPRD = ET_3RD;          // Generate INT on 3rd event
 }
 void InitEPwm11()
 {
@@ -435,10 +329,10 @@ void InitEPwm11()
     //
     // Setup TBCLK
     //
-    EPwm11Regs.TBCTL.bit.CTRMODE = TB_COUNT_UPDOWN; // Count up
+    EPwm11Regs.TBCTL.bit.CTRMODE = TB_COUNT_UP; // Count up
     EPwm11Regs.TBCTL.bit.PHSEN = TB_DISABLE;        // Disable phase loading
-    EPwm11Regs.TBCTL.bit.HSPCLKDIV = TB_DIV4;       // Clock ratio to SYSCLKOUT
-    EPwm11Regs.TBCTL.bit.CLKDIV = TB_DIV4;
+    EPwm11Regs.TBCTL.bit.HSPCLKDIV = TB_DIV1;       // Clock ratio to SYSCLKOUT
+    EPwm11Regs.TBCTL.bit.CLKDIV = TB_DIV1;
 
     EPwm11Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;    // Load registers every ZERO
     EPwm11Regs.CMPCTL.bit.SHDWBMODE = CC_SHADOW;
@@ -465,14 +359,8 @@ void InitEPwm11()
     EPwm11Regs.DBCTL.bit.OUT_MODE = DB_FULL_ENABLE;
     EPwm11Regs.DBCTL.bit.POLSEL = DB_ACTV_LO;
     EPwm11Regs.DBCTL.bit.IN_MODE = DBA_ALL;
-    EPwm11Regs.DBRED.bit.DBRED = EPWM1_MIN_DB;
-    EPwm11Regs.DBFED.bit.DBFED = EPWM1_MIN_DB;
+    EPwm11Regs.DBRED.bit.DBRED = deadtime_R;
+    EPwm11Regs.DBFED.bit.DBFED = deadtime_R;
     EPwm1_DB_Direction = DB_UP;
 
-    //
-    // Interrupt where we will change the Deadband
-    //
-    EPwm11Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;    // Select INT on Zero event
-    EPwm11Regs.ETSEL.bit.INTEN = 1;               // Enable INT
-    EPwm11Regs.ETPS.bit.INTPRD = ET_3RD;          // Generate INT on 3rd event
 }
