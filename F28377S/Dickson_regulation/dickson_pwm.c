@@ -1,9 +1,7 @@
-#include "F28x_Project.h"
-#include "dickson_regulation.h"
-
+#include "dickson_pwm.h"
 
 float duty_main = 0.5;		// duty ratio, between 0 to 1
-int fsw = 200;		 	// switching frequency, in kHz
+int fsw = 250;		 	// switching frequency, in kHz
 float split = 0.75;		// split phase duty ratio
 // deadtime is realized through phase shift, since we are not using the B channels
 int deadtime_R = 0;		// rising edge deadtime in number of clock cycles
@@ -89,9 +87,9 @@ void InitEPwm1()
     //
     // Interrupt where we will change the Deadband
     //
-    EPwm1Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;    // Select INT on Zero event
-    EPwm1Regs.ETSEL.bit.INTEN = 1;               // Enable INT
-    EPwm1Regs.ETPS.bit.INTPRD = ET_3RD;          // Generate INT on 3rd event
+//    EPwm1Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;    // Select INT on Zero event
+//    EPwm1Regs.ETSEL.bit.INTEN = 1;               // Enable INT
+//    EPwm1Regs.ETPS.bit.INTPRD = ET_3RD;          // Generate INT on 3rd event
 }
 
 
